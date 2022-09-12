@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Burn Rate and Alerts</title>
+    <meta
+      name="description"
+      content="Соотношение Burn Rate и времени срабатывания на уровень ошибок"
+    />
+  </head>
+
+  <body>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        document
+          .querySelectorAll("form")
+          .forEach((form) => form.requestSubmit());
+      });
+    </script>
+    <script>
+      function timeConversion(millisec) {
+        var seconds = (millisec / 1000).toFixed(1);
+
+        var minutes = (millisec / (1000 * 60)).toFixed(1);
+
+        var hours = (millisec / (1000 * 60 * 60)).toFixed(1);
+
+        var days = (millisec / (1000 * 60 * 60 * 24)).toFixed(1);
+
+        if (seconds < 60) {
+          return Number(seconds).toLocaleString() + " сек.";
+        } else if (minutes < 60) {
+          return Number(minutes).toLocaleString() + " мин.";
+        } else if (hours < 24) {
+          return Number(hours).toLocaleString() + " ч.";
+        } else {
+          return Number(days).toLocaleString() + " дней";
+        }
+      }
+      function calcTime(burnRate, errorBudget, alertInterval, errorRate) {
+        const sloThreshold = errorBudget / 100;
+        const timeToAlert =
+          (sloThreshold / (errorRate / 100)) * alertInterval * burnRate * 60;
+
+        if (timeToAlert > 30 * 24 * 60) {
+          return +Infinity;
+        }
+
+        return "~" + timeConversion(timeToAlert * 60 * 1000);
+      }
+      function onTimeFormSubmit(event) {
+        var burnRate = Number(this.burnRate.value);
+        var errorBudget = 100 - Number(this.slo.value);
+        var alertInterval = Number(this.alertInterval.value);
+        var errorRate = Number(this.errorRate.value);
+
+        var time = calcTime(burnRate, errorBudget, alertInterval, errorRate);
+        document.getElementById("time").innerHTML = time;
+
+        event.preventDefault();
+        return false;
+      }
+      function onBRFormSubmit() {
+        var errorBudgetPart = Number(this.errorBudgetPart.value);
+        var alertInterval = Number(this.alertInterval.value);
+
+        var burnRate = (30 * 24 * errorBudgetPart) / (100 * alertInterval);
+        document.getElementById("burnRateValue").innerHTML =
+          burnRate.toLocaleString();
+
+        event.preventDefault();
+        return false;
+      }
+    </script>
+    <style>
+      label {
+        display: flex;
+        margin: 15px;
+      }
+
+      label > span {
+        width: 250px;
+      }
+
+      #timeWrapper,
+      #burnRateWrapper {
+        margin: 15px;
+      }
+
+      #time,
+      #burnRateValue {
+        color: brown;
+        font-weight: 800;
+      }
+    </style>
+    <form onsubmit="onBRFormSubmit.apply(this, arguments)" action="">
+      <fieldset>
+        <legend>Расчёт burn rate</legend>
+        <label>
+          <span>Какая доля бюджета ошибок, %</span>
+          <input
+            id="errorBudgetPart"
+            type="number"
+            min="0.1"
+            value="2"
+            step="0.1"
+          />
+        </label>
+        <label>
+          <span>За какое время сгорает, часов</span>
+          <input
+            id="alertInterval"
+            type="number"
+            min="0.1"
+            value="1"
+            step="0.1"
+          />
+        </label>
+        <input type="submit" value="Посчитать" />
+      </fieldset>
+    </form>
+    <div id="burnRateWrapper">
+      <span>Burn Rate:&nbsp;</span><span id="burnRateValue">...</span>
+    </div>
+    <form onsubmit="onTimeFormSubmit.apply(this, arguments)" action="">
+      <fieldset>
+        <legend>Расчёт времени срабатывания</legend>
+        <label>
+          <span>Burn Rate</span>
+          <input id="burnRate" type="number" min="0" value="14.4" step="0.1" />
+        </label>
+        <label>
+          <span>Целевое SLO, %</span>
+          <input id="slo" type="number" min="0" value="99.9" step="0.0001" />
+        </label>
+        <label>
+          <span>Интервал алерта, часов</span>
+          <input
+            id="alertInterval"
+            type="number"
+            min="0"
+            value="1"
+            step="0.1"
+          />
+        </label>
+        <label>
+          <span>Текущая частота ошибок, %</span>
+          <input
+            id="errorRate"
+            type="number"
+            min="0"
+            value="50"
+            step="0.0001"
+          />
+        </label>
+        <input type="submit" value="Посчитать" />
+      </fieldset>
+    </form>
+    <div id="timeWrapper">
+      <span>Время до срабатывания алерта:&nbsp;</span><span id="time">...</span>
+    </div>
+  </body>
+</html>
